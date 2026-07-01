@@ -11,13 +11,12 @@ const shopRoutes = require("./src/routes/shopRoutes");
 const productRoutes = require("./src/routes/productRoutes");
 const messageRoutes = require("./src/routes/messageRoutes");
 const orderRoutes = require("./src/routes/orderRoutes");
+const notificationRoutes = require("./src/routes/notificationRoutes");
 
 const { notFound, errorHandler } = require("./src/middleware/errorHandler");
 
 const app = express();
 
-// CLIENT_URL can be a single URL or a comma-separated list, e.g.
-// CLIENT_URL=http://localhost:5173,https://your-app.vercel.app
 const allowedOrigins = (process.env.CLIENT_URL || "")
   .split(",")
   .map((o) => o.trim())
@@ -26,10 +25,6 @@ const allowedOrigins = (process.env.CLIENT_URL || "")
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow tools like curl/Postman (no Origin header), allow if the
-      // allow-list is empty (so the app never hard-fails on a missing
-      // env var), allow if the origin is explicitly listed, and always
-      // allow any *.vercel.app deployment so previews keep working.
       if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
@@ -49,7 +44,6 @@ app.use(
 
 app.use(express.json());
 
-// Health check (root, so visiting the Render URL in a browser doesn't 404)
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "Nearby Hub API is running" });
 });
@@ -64,6 +58,7 @@ app.use("/api/shops", shopRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Error handlers
 app.use(notFound);
@@ -71,7 +66,6 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-// Start server after DB connect
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);

@@ -1,4 +1,5 @@
 const Order = require("../models/Order");
+const Notification = require("../models/Notification");
 
 // POST /api/orders  (user only)
 const placeOrder = async (req, res, next) => {
@@ -23,6 +24,13 @@ const placeOrder = async (req, res, next) => {
       paymentMethod,
     });
 
+    // Create a notification for the shop owner
+    await Notification.create({
+      ownerEmail: shopEmail.toLowerCase(),
+      message: `New order from ${req.user.name} - ${items.length} item(s), total ₹${total}`,
+      orderId: order._id,
+    });
+
     res.status(201).json({ message: "Order placed successfully", order });
   } catch (err) {
     next(err);
@@ -39,4 +47,38 @@ const getMyOrders = async (req, res, next) => {
   }
 };
 
-module.exports = { placeOrder, getMyOrders };
+// GET /api/orders/shop  (owner only)
+const getShopOrders = async (req, res, next) => {
+  try {
+    const orders = await Order.find({ shopEmail: req.user.email }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/orders/:id/status  (owner only)
+const updateOrderStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    if (!status) {
+      return res.status(400).json({ message: "Status is required." });
+    }
+
+    const order = await Order.findOneAndUpdate(
+      { _id: req.params.id, shopEmail: req.user.email },
+      { status },
+      { new: true }
+    );
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.json({ message: "Order status updated", order });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { placeOrder, getMyOrders, getShopOrders, updateOrderStatus };
