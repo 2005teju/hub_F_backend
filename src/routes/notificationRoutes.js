@@ -1,10 +1,15 @@
 const express = require("express");
-const { getMyNotifications, markNotificationRead } = require("../controllers/notificationController");
-const { protect, authorize } = require("../middleware/auth");
+const {
+  getMyNotifications,
+  markNotificationRead,
+} = require("../controllers/notificationController");
+
+const { protect } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.get("/", protect, authorize("owner"), getMyNotifications);
-router.patch("/:id/read", protect, authorize("owner"), markNotificationRead);
+// Accessible by both users and owners
+router.get("/", protect, getMyNotifications);
+router.patch("/:id/read", protect, markNotificationRead);
 
 module.exports = router;
