@@ -13,7 +13,14 @@ const shopSchema = new mongoose.Schema(
     phone: { type: String, required: true, trim: true },
     shopName: { type: String, required: true, trim: true },
     address: { type: String, required: true, trim: true },
-    gstId: { type: String, required: true, trim: true },
+    // ── NEW: unique + uppercase, since a real GST number belongs to exactly one business ──
+    gstId: {
+      type: String,
+      required: true,
+      unique: true,
+      uppercase: true,
+      trim: true,
+    },
     customerLicense: { type: String, required: true, trim: true },
     verified: { type: Boolean, default: false },
   },

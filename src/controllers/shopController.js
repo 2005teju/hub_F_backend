@@ -11,6 +11,17 @@ const saveShop = async (req, res, next) => {
       return res.status(400).json({ message: "Please fill all required fields." });
     }
 
+    // ── NEW: normalize GST ID the same way the schema does ──
+    const normalizedGstId = gstId.trim().toUpperCase();
+
+    // ── NEW: proactively check no *other* shop already owns this GST ID ──
+    const gstOwner = await Shop.findOne({ gstId: normalizedGstId });
+    if (gstOwner && gstOwner.ownerEmail !== ownerEmail) {
+      return res.status(400).json({
+        message: "This GST ID is already registered to another shop.",
+      });
+    }
+
     let shop = await Shop.findOne({ ownerEmail });
 
     if (shop) {
@@ -18,7 +29,7 @@ const saveShop = async (req, res, next) => {
       shop.phone = phone.trim();
       shop.shopName = shopName.trim();
       shop.address = address.trim();
-      shop.gstId = gstId.trim();
+      shop.gstId = normalizedGstId;
       shop.customerLicense = customerLicense.trim();
       // verified flag is intentionally preserved on re-save
       await shop.save();
@@ -29,7 +40,7 @@ const saveShop = async (req, res, next) => {
         phone: phone.trim(),
         shopName: shopName.trim(),
         address: address.trim(),
-        gstId: gstId.trim(),
+        gstId: normalizedGstId,
         customerLicense: customerLicense.trim(),
         verified: false,
       });
@@ -40,6 +51,21 @@ const saveShop = async (req, res, next) => {
       shop,
     });
   } catch (err) {
+    // ── NEW: safety net for the schema-level unique constraint ──
+    // Covers the rare race condition where two requests for the same
+    // GST ID both pass the findOne() check before either save()/create() finishes.
+    if (err.code === 11000 && err.keyPattern) {
+      if (err.keyPattern.gstId) {
+        return res.status(400).json({
+          message: "This GST ID is already registered to another shop.",
+        });
+      }
+      if (err.keyPattern.ownerEmail) {
+        return res.status(400).json({
+          message: "A shop is already registered for this account.",
+        });
+      }
+    }
     next(err);
   }
 };
